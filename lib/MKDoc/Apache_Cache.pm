@@ -54,7 +54,7 @@ use CGI;
 use Compress::Zlib;
 use Digest::MD5;
 
-our $VERSION = '0.7';
+our $VERSION = '0.71';
 
 
 sub handler ($$)
@@ -84,21 +84,24 @@ sub handler ($$)
 
     # if the client doesn't support gzip, fix the headers,
     # ungzip && send.
+    $ENV{HTTP_ACCEPT_ENCODING} ||= '';
     lc $ENV{'HTTP_ACCEPT_ENCODING'} !~ /gzip/ and do {
 
         my ($headers, $body) = split /\r?\n\r?\n/, $data, 2;
+        $body ||= '';
         $headers = join "\r\n",
                    grep !/content-length\:/i,
                    grep !/content-encoding\:/i,
                    grep !/vary\:/i,
                    split /\r?\n/, $headers;
         $body = Compress::Zlib::memGunzip ($body);
-        $headers .= "\r\nContent-Length: " . length ($body);
+        $headers .= "\r\nContent-Length: " . length ($body) if ($body);
         $data = $headers . "\r\n\r\n" . $body;
     };
 
     $ENV{REQUEST_METHOD} =~ /HEAD/i and do {
         $data =~ s/\r?\ncontent-length\:.*//i;
+        $data =~ s/\r?\netag\:.*//i;
     };
 
     $r->print ($data);
@@ -216,7 +219,10 @@ sub _cache_object_option
 sub _make_cache_friendly
 {
     my $buf = shift;
+    $buf ||= '';
     my ($headers, $body) = split /\r?\n\r?\n/, $buf, 2;
+    $headers ||= '';
+    $body ||= '';
     my @o = ();
 
     # Figure out some kind of content_type
@@ -227,7 +233,6 @@ sub _make_cache_friendly
  
     # Vary: Accept-Encoding is here to tell proxies to keep a separate
     # cache for every different Accept-Encoding that is being sent.
-    $_ = lc( $ENV{'HTTP_ACCEPT_ENCODING'} );
     $content_type !~ /zip/ and $content_type =~ /(text|xml)/ and do {
         $body = Compress::Zlib::memGzip ($body);
         push @o, "Content-Encoding: gzip";
@@ -235,10 +240,10 @@ sub _make_cache_friendly
     };
 
     # Compute ETag
-    push @o, "ETag: " . Digest::MD5::md5_hex ($body);
+    push @o, "ETag: " . Digest::MD5::md5_hex ($body) if ($body);
 
     # Compute Content-Length
-    push @o, "Content-Length: " . length ($body);
+    push @o, "Content-Length: " . length ($body) if ($body);
 
     push @o, $headers;
     push @o, "";

@@ -1,7 +1,15 @@
 Revision history for MKDoc::Apache_Cache
 
+0.71 Thu Feb  3 15:45:00 2005
+    - Fixed some 'uninitialized value in length' warnings when delivering
+      content without body
+    - Turn off some 'uninitialized value in lc' warnings when delivering
+      content to clients that don't specify accept-encoding:
+    - Don't deliver an Etag header calculated from the (empty) body when
+      responding to HEAD requests (this needs to be fixed properly).
+
 0.7 Thu Sep 23 12:54:00 2004
-    - Removed defunct jhiver@mkdoc.com email address as Jean-Michel is no longer maintainer
+    - Removed defunct email address as Jean-Michel is no longer maintainer
     - bandage patch to fix always gzip encoded bug
 
 0.5 Thu Jul 29 12:53:36 2004
