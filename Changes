@@ -1,4 +1,10 @@
 Revision history for MKDoc::Apache_Cache
 
+0.2 Thu Feb  5 12:47:44 2004
+    - Fixed 404 pages not serving any content at all
+    - Fixed no content sent with first uncached request
+    - Fixed default identifier not taking GET / HEAD into account
+    - Added 'use bytes' pragma
+
 0.1 Mon Dec 22 12:54:33 2003
     - Initial Release 

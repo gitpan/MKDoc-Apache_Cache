@@ -1,6 +1,6 @@
 package MKDoc::Apache_Cache::Capture;
 use base qw /Apache::RegistryNG Apache/;
-
+use bytes;
 
 sub new
 {
@@ -48,10 +48,11 @@ use Apache;
 use Apache::Constants;
 use MKDoc::Control_List;
 use Cache::FileCache;
+use File::Spec;
 use vars qw /$Request/;
 use CGI;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 
 sub handler ($$)
@@ -63,16 +64,24 @@ sub handler ($$)
     
     my @args = $class->_control_list_process();
     my ($ret, $data) = $class->_do_cached (@args);
+
+    # bug:
+    # 200 at /usr/local/lib/perl5/site_perl/5.8.0/MKDoc/Apache_Cache.pm line 66.
+    # Status: 404 Not Found
+    # Content-Type: text/html
+    # =======================
+    # this is the bugfix
+    my ($n_ret) = $data =~ /Status\:\s+(\d+)/;
+    $n_ret ||= $ret;
     $r->print ($data);
-    
-    return $ret;
+    return $n_ret;
 }
 
 
 sub _do_cached
 {
     my $class      = shift;
-    
+
     my $timeout    = shift || return $class->_do_request();
     my $identifier = shift || $class->_default_identifier();
     
@@ -81,7 +90,9 @@ sub _do_cached
 	my ($ret, $data) = $class->_do_request();
 	my $tocache = $ret . "\n" . $data;
 	$cache_obj->set ($identifier, $tocache, $timeout);
-	return $tocache;
+
+        # fixed bug here
+	$tocache;
     };
     
     return split /\n/, $cached, 2;
@@ -100,7 +111,7 @@ sub _do_request
 sub _default_identifier
 {
     my $class = shift;
-    return CGI->new()->self_url();
+    return "$ENV{REQUEST_METHOD}:" . CGI->new()->self_url();
 }
 
 
@@ -144,11 +155,14 @@ sub _cache_object_option
     my $args = shift;
     my $key  = 'MKDoc_Apache_Cache_' . uc ($opt);
     my $val  = Apache->request->dir_config ($key) || $ENV{$key};
+    $key eq 'MKDoc_Apache_Cache_CACHE_ROOT' and do { $val ||= File::Spec->tmpdir() };
+
     defined $val and do { $args->{$opt} = $val };
 }
 
 
 1;
+
 
 __END__
 
@@ -231,9 +245,9 @@ weeks, M, month, months, y, year, and years.  Additionally, $EXPIRES_NOW can be 
 
 So for example:
 
-  RET_VALUE 10_minutes "10 min"
-  RET_VALUE one_day    "24 hours"
-  RET_VALUE never      "never"
+  RET_VALUE ten_minutes "10 min"
+  RET_VALUE one_day     "24 hours"
+  RET_VALUE never       "never"
 
 
 =head2 Defining cache policies
