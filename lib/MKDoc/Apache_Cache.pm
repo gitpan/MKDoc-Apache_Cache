@@ -52,7 +52,7 @@ use File::Spec;
 use vars qw /$Request/;
 use CGI;
 
-our $VERSION = '0.2';
+our $VERSION        = '0.3';
 
 
 sub handler ($$)
@@ -71,8 +71,11 @@ sub handler ($$)
     # Content-Type: text/html
     # =======================
     # this is the bugfix
+    $data ||= '';
     my ($n_ret) = $data =~ /Status\:\s+(\d+)/;
     $n_ret ||= $ret;
+
+    unless ($HEADER_EXPIRES) { $data =~ s/\n:.+//g };
     $r->print ($data);
     return $n_ret;
 }
@@ -81,17 +84,31 @@ sub handler ($$)
 sub _do_cached
 {
     my $class      = shift;
-
+    
     my $timeout    = shift || return $class->_do_request();
     my $identifier = shift || $class->_default_identifier();
+
+    $timeout = _expiration_time ($timeout);
     
     my $cache_obj  = $class->_cache_object();
-    my $cached     = $cache_obj->get ($identifier) || do {
+    my $cached     = $cache_obj->get ($identifier) || do { 
 	my ($ret, $data) = $class->_do_request();
 	my $tocache = $ret . "\n" . $data;
-	$cache_obj->set ($identifier, $tocache, $timeout);
+        do {
 
-        # fixed bug here
+            # add Expires: header to be stored in the cached file
+            my $expires = _http_date ($timeout + time());
+            my $expires_name = $ENV{MKDoc_Apache_Cache_NOEXPIRES} ? 'X-Exp' : 'Expires';
+            $tocache =~ s/\n/\n$expires_name: $expires\n/;
+
+            # remove cookies before writing the cached file
+            my $cache_data = $tocache;
+            $ENV{MKDoc_Apache_Cache_NOCOOKIES} and do {
+                $cache_data    =~ s/\nSet-Cookie:.+//g;
+            };
+           
+            $cache_obj->set ($identifier, $cache_data, $timeout);
+        };
 	$tocache;
     };
     
@@ -159,6 +176,50 @@ sub _cache_object_option
 
     defined $val and do { $args->{$opt} = $val };
 }
+
+
+# borrowed from http://search.cpan.org/src/RSE/lcwa-1.0.0/lib/lwp/lib/HTTP/Date.pm
+# --------------------------------------------------------------------------------
+our @DoW = qw(Sun Mon Tue Wed Thu Fri Sat);
+our @MoY = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+
+sub _http_date (;$)
+{
+   my $time = shift;
+   $time = time unless defined $time;
+   my ($sec, $min, $hour, $mday, $mon, $year, $wday) = gmtime($time);
+   sprintf("%s, %02d %s %04d %02d:%02d:%02d GMT",
+	   $DoW[$wday],
+	   $mday, $MoY[$mon], $year+1900,
+	   $hour, $min, $sec);
+}
+# --------------------------------------------------------------------------------
+
+
+# borrowed / modded from Cache::BaseCache
+# --------------------------------------------------------------------------------
+our $EXPIRES_NOW      = 'now';
+our $EXPIRES_NEVER    = 'never';
+our %Expiration_Units = ( map(($_,             1), qw(s second seconds sec)),
+                          map(($_,            60), qw(m minute minutes min)),
+                          map(($_,         60*60), qw(h hour hours)),
+                          map(($_,      60*60*24), qw(d day days)),
+                          map(($_,    60*60*24*7), qw(w week weeks)),
+                          map(($_,   60*60*24*30), qw(M month months)),
+                          map(($_,  60*60*24*365), qw(y year years)) );
+sub _expiration_time
+{
+  my ($p_expires_in) = @_;
+  uc ($p_expires_in) eq uc ($EXPIRES_NOW)   and return 0; 
+  uc ($p_expires_in) eq uc ($EXPIRES_NEVER) and return;
+  $p_expires_in =~ /^\s*([+-]?(?:\d+|\d*\.\d*))\s*$/ and return $p_expires_in;
+  $p_expires_in =~ /^\s*([+-]?(?:\d+|\d*\.\d*))\s*(\w*)\s*$/ and
+      exists $Expiration_Units{$2} and
+      return $Expiration_Units{$2} * $1;
+  
+  return 0;
+}
+# --------------------------------------------------------------------------------
 
 
 1;
