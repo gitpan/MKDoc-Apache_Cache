@@ -1,6 +1,6 @@
 Revision history for MKDoc::Apache_Cache
 
-0.3 Tue Feb 10 16:45:36 2004
+0.4 Tue Feb 10 16:45:36 2004
     - Fixed some 'use of uninitialized value' issues
     - Changed MKDoc::Apache_Cache to include an Expires: header
     - Added MKDoc_Apache_Cache_NOEXPIRES option

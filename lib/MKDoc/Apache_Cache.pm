@@ -52,7 +52,7 @@ use File::Spec;
 use vars qw /$Request/;
 use CGI;
 
-our $VERSION        = '0.3';
+our $VERSION        = '0.4';
 
 
 sub handler ($$)
@@ -75,7 +75,6 @@ sub handler ($$)
     my ($n_ret) = $data =~ /Status\:\s+(\d+)/;
     $n_ret ||= $ret;
 
-    unless ($HEADER_EXPIRES) { $data =~ s/\n:.+//g };
     $r->print ($data);
     return $n_ret;
 }
