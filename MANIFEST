@@ -1,0 +1,6 @@
+Changes
+MANIFEST			This list of files
+Makefile.PL
+README
+lib/MKDoc/Apache_Cache.pm
+t/001.t
