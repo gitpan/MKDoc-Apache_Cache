@@ -15,7 +15,7 @@ WriteMakefile(
     },
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'lib/MKDoc/Apache_Cache.pm', # retrieve abstract from module
-       AUTHOR     => 'Jean-Michel Hiver <jhiver@mkdoc.com>') : ()),
+       AUTHOR     => 'Jean-Michel Hiver <info@mkdoc.com>') : ()),
 );
 
 

@@ -54,7 +54,7 @@ use CGI;
 use Compress::Zlib;
 use Digest::MD5;
 
-our $VERSION = '0.6';
+our $VERSION = '0.7';
 
 
 sub handler ($$)
@@ -84,8 +84,7 @@ sub handler ($$)
 
     # if the client doesn't support gzip, fix the headers,
     # ungzip && send.
-    lc $ENV{'HTTP_ACCEPT_ENCODING'} !~ /gzip/ and
-          $ret =~ /\ncontent-encoding\: gzip/ and do {     
+    lc $ENV{'HTTP_ACCEPT_ENCODING'} !~ /gzip/ and do {
 
         my ($headers, $body) = split /\r?\n\r?\n/, $data, 2;
         $headers = join "\r\n",
@@ -100,9 +99,6 @@ sub handler ($$)
 
     $ENV{REQUEST_METHOD} =~ /HEAD/i and do {
         $data =~ s/\r?\ncontent-length\:.*//i;
-        $data =~ s/\r?\ncontent-encoding\:.*//i;
-        $data =~ s/\r?\nvary\:.*//i;
-        $data =~ s/\r?\netag\:.*//i;
     };
 
     $r->print ($data);
@@ -221,13 +217,6 @@ sub _make_cache_friendly
 {
     my $buf = shift;
     my ($headers, $body) = split /\r?\n\r?\n/, $buf, 2;
-
-    # we're going to re-write those...
-    $headers =~ s/\r?\ncontent-length\:.*//i;
-    $headers =~ s/\r?\ncontent-encoding\:.*//i;
-    $headers =~ s/\r?\nvary\:.*//i;
-    $headers =~ s/\r?\netag\:.*//i;
-
     my @o = ();
 
     # Figure out some kind of content_type
@@ -238,6 +227,7 @@ sub _make_cache_friendly
  
     # Vary: Accept-Encoding is here to tell proxies to keep a separate
     # cache for every different Accept-Encoding that is being sent.
+    $_ = lc( $ENV{'HTTP_ACCEPT_ENCODING'} );
     $content_type !~ /zip/ and $content_type =~ /(text|xml)/ and do {
         $body = Compress::Zlib::memGzip ($body);
         push @o, "Content-Encoding: gzip";
@@ -454,7 +444,7 @@ see as a standalone CPAN module, send an email to <mkdoc-modules@lists.webarch.c
 
 Copyright 2003 - MKDoc Holdings Ltd.
 
-Author: Jean-Michel Hiver <jhiver@mkdoc.com>
+Author: Jean-Michel Hiver
 
 This module is free software and is distributed under the same license as Perl
 itself. Use it at your own risk.

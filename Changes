@@ -1,12 +1,13 @@
 Revision history for MKDoc::Apache_Cache
 
-0.6 Thu Jul 29 12:53:36 2004
+0.7 Thu Sep 23 12:54:00 2004
+    - Removed defunct jhiver@mkdoc.com email address as Jean-Michel is no longer maintainer
+    - bandage patch to fix always gzip encoded bug
+
+0.5 Thu Jul 29 12:53:36 2004
     - Added 'expires' header
     - Added ETag header
     - Added GZip compression
-
-0.5
-    - Forgot to 'make manifest...'
 
 0.4 Tue Feb 10 16:45:36 2004
     - Fixed some 'use of uninitialized value' issues
